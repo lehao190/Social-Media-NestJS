@@ -1,5 +1,5 @@
 import { User } from 'src/users/entities/user.entity';
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 
 @Entity()
 export class Post {
@@ -7,7 +7,10 @@ export class Post {
   id: number;
 
   @Column()
-  text: string
+  text: string;
+
+  @Column({ nullable: true })
+  file: string;
 
   @CreateDateColumn()
   created_at: Date;
@@ -15,6 +18,8 @@ export class Post {
   @UpdateDateColumn()
   updated_at: Date;
 
-  @ManyToOne(() => User, (user) => user.posts)
-  user: User
+  @ManyToOne(() => User, (user) => user.posts, {
+    cascade: ["insert", "update"],
+  })
+  user: User;
 }

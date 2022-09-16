@@ -30,6 +30,8 @@ export class User {
   @UpdateDateColumn()
   updated_at: Date;
 
-  @OneToMany(() => Post, (post) => post.user)
-  posts: Post[]
+  @OneToMany(() => Post, (post) => post.user, {
+    cascade: ["insert", "update"]
+  })
+  posts: Post[];
 }

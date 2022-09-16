@@ -1,12 +1,20 @@
-import { Controller, UseGuards, Request, Post, Get, Session, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  UseGuards,
+  Request,
+  Post,
+  Get,
+  Session,
+  UnauthorizedException,
+  Res,
+} from '@nestjs/common';
+import { Response } from 'express';
 import { AuthService } from './auth/auth.service';
 import { LocalAuthGuard } from './auth/local-auth.guard';
 
 @Controller()
 export class AppController {
-  constructor(
-    private authService: AuthService,
-  ) {}
+  constructor(private authService: AuthService) {}
 
   // Login
   @UseGuards(LocalAuthGuard)
@@ -18,10 +26,10 @@ export class AppController {
   // Refresh token
   @Post('auth/refresh')
   async refresh(@Request() req) {
-    if(req.session.passport && req.session.passport.user) {
+    if (req.session.passport && req.session.passport.user) {
       const accessToken = this.authService.createNewToken(req.user);
       return {
-        accessToken
+        accessToken,
       };
     } else {
       throw new UnauthorizedException('Cannot issue token!');
@@ -30,27 +38,30 @@ export class AppController {
 
   // Logout
   @Post('auth/logout')
-  logout(@Request() req): object{
-    if(req.session.passport && req.session.passport.user) {
-      req.session.destroy();
+  async logout(@Request() req, @Res() res: Response) {
+    if (req.session.passport && req.session.passport.user) {
       this.authService.logout(req.user);
 
-      return {
-        message: 'Logout Successfully!!!'
-      };
+      return req.logout(() => {
+        res.clearCookie('connect.sid');
+        req.session.destroy();
+
+        res.status(200).json({
+          message: 'Logout Successfully!!!',
+        });
+      });
     }
-    return {
-      message: 'Not Logged In!!!'
-    };
+    return res.json({
+      message: 'Not Logged In!!!',
+    });
   }
 
   // Get Authenticated User's Credentials
-  // @UseGuards(JwtAuthGuard)
   @Get('profile')
   getProfile(@Request() req, @Session() session: Record<string, any>) {
-    if(session.passport && session.passport.user) {
-      const user = { 
-        ...session.passport.user 
+    if (session.passport && session.passport.user) {
+      const user = {
+        ...session.passport.user,
       };
       delete user.refresh_token;
       return user;

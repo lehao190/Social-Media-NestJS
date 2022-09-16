@@ -1,20 +1,65 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  ParseIntPipe,
+  DefaultValuePipe,
+  Query,
+  UseInterceptors,
+  UploadedFile,
+  Session,
+  BadRequestException,
+} from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { Pagination } from 'nestjs-typeorm-paginate';
+import { Post as UserPost } from './entities/post.entity';
+import { FileInterceptor } from '@nestjs/platform-express';
 
+@UseGuards(JwtAuthGuard)
 @Controller('posts')
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
-  create(@Body() createPostDto: CreatePostDto) {
-    return this.postsService.create(createPostDto);
+  @UseInterceptors(FileInterceptor('file', {
+    limits: {
+      fileSize: 30 * 1024 * 1024,
+    },
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.match(/\/(jpg|jpeg|png|mp4|ogg|mov|avi|wmv)$/)) {
+        cb(null, true);
+      } else {
+        cb(new BadRequestException('File type is not acceptable!'), false);
+      }
+    },
+  }))
+  create(
+    @Session() session: Record<string, any>,
+    @Body() createPostDto: CreatePostDto,
+    @UploadedFile()
+    file: Express.Multer.File,
+  ) {
+    return this.postsService.create(createPostDto, file, session.passport.user);
   }
 
   @Get()
-  findAll() {
-    return this.postsService.findAll();
+  findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number = 10,
+  ): Promise<Pagination<UserPost>> {
+    limit = limit > 100 ? 100 : limit;
+    return this.postsService.paginate({
+      page,
+      limit,
+    });
   }
 
   @Get(':id')
