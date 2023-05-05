@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { getStorage } from 'firebase-admin/storage';
 import { IPaginationOptions, paginate, Pagination } from 'nestjs-typeorm-paginate';
@@ -26,9 +26,13 @@ export class PostsService {
 
     if(file) {
       const fileName = 'posts/'+ Date.now() + file.originalname;
-      await getStorage().bucket().file(fileName).save(file.buffer)
-      await getStorage().bucket().file(fileName).makePublic();
-      const postFile = await getStorage().bucket().file(fileName).publicUrl();
+      // await getStorage().bucket().file(fileName).save(file.buffer)
+      // await getStorage().bucket().file(fileName).makePublic();
+      // const postFile = await getStorage().bucket().file(fileName).publicUrl();
+      const firebaseFile = await getStorage().bucket().file(fileName);
+      await firebaseFile.save(file.buffer);
+      await firebaseFile.makePublic();
+      const postFile = firebaseFile.publicUrl();
       newPost.file = postFile;
     }
 
@@ -63,14 +67,36 @@ export class PostsService {
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} post`;
+    return this.postsRepository.findOneBy({ id });
   }
 
-  update(id: number, updatePostDto: UpdatePostDto) {
-    return `This action updates a #${id} post`;
+  async update(id: number, updatePostDto: UpdatePostDto) {
+    const existedPost = await this.postsRepository.findOneBy({ id });
+    
+    if(!existedPost) {
+      throw new BadRequestException('Post Not Existed!');
+    }
+
+    await this.postsRepository.update({ id }, updatePostDto);
+    return await this.postsRepository.findOneBy({ id });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} post`;
+  async remove(id: number) {
+    const existedPost = await this.postsRepository.findOneBy({ id });
+    
+    if(!existedPost) {
+      throw new BadRequestException('Post Not Existed!');
+    }
+
+    if(existedPost.file) {
+      const postImageName = existedPost.file.split('%2F');
+      await getStorage().bucket().file('posts/' + postImageName[1]).delete();
+    }
+
+    await this.postsRepository.delete(id)
+
+    return {
+      message: 'Delete Post Successfully'
+    }
   }
 }

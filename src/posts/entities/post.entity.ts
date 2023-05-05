@@ -19,7 +19,8 @@ export class Post {
   updated_at: Date;
 
   @ManyToOne(() => User, (user) => user.posts, {
-    cascade: ["insert", "update"],
+    // cascade: ["insert", "update"],
+    onDelete: "CASCADE"
   })
   user: User;
 }

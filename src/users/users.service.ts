@@ -46,9 +46,13 @@ export class UsersService {
     // Upload avatar to firebase storage
     if(avatar) {
       const avatarName = 'images/'+ Date.now() + avatar.originalname;
-      await getStorage().bucket().file(avatarName).save(avatar.buffer)
-      await getStorage().bucket().file(avatarName).makePublic();
-      const userAvatar = await getStorage().bucket().file(avatarName).publicUrl();
+      // await getStorage().bucket().file(avatarName).save(avatar.buffer)
+      // await getStorage().bucket().file(avatarName).makePublic();
+      // const userAvatar = await getStorage().bucket().file(avatarName).publicUrl();
+      const firebaseFile = await getStorage().bucket().file(avatarName)
+      await firebaseFile.save(avatar.buffer)
+      await firebaseFile.makePublic()
+      const userAvatar = await firebaseFile.publicUrl()
       user.avatar = userAvatar;
     }
 
@@ -76,12 +80,42 @@ export class UsersService {
   async findOne(email: string): Promise<User> {
     return this.usersRepository.findOneBy({ email });
   }
-
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  
+  async findOneById(id: number): Promise<User> {
+    return this.usersRepository.findOneBy({ id });
   }
 
-  async remove(id: number): Promise<void> {
-    await this.usersRepository.delete(id)
+  async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+    const existedUser = await this.usersRepository.findOneBy({ id });
+    
+    if(!existedUser) {
+      throw new BadRequestException('User Not Existed!');
+    }
+    
+    await this.usersRepository.update({ id }, updateUserDto);
+    const updatedUser = await this.usersRepository.findOneBy({ id });
+
+    delete updatedUser.password;
+    delete updatedUser.refresh_token;
+    return updatedUser;
+  }
+
+  async remove(id: number) {
+    const existedUser = await this.usersRepository.findOneBy({ id });
+    
+    if(!existedUser) {
+      throw new BadRequestException('User Not Existed!');
+    }
+
+    if(existedUser.avatar) {
+      const avatarName = existedUser.avatar.split('%2F');
+      await getStorage().bucket().file('images/' + avatarName[1]).delete();
+    }
+    
+    await this.usersRepository.delete(id);
+    
+    return {
+      message: 'Delete User Successfully'
+    }
   }
 }

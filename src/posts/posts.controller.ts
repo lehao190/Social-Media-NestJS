@@ -22,6 +22,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { Pagination } from 'nestjs-typeorm-paginate';
 import { Post as UserPost } from './entities/post.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ValidationPipe } from 'src/validation.pipe';
 
 @UseGuards(JwtAuthGuard)
 @Controller('posts')
@@ -43,7 +44,7 @@ export class PostsController {
   }))
   create(
     @Session() session: Record<string, any>,
-    @Body() createPostDto: CreatePostDto,
+    @Body(new ValidationPipe()) createPostDto: CreatePostDto,
     @UploadedFile()
     file: Express.Multer.File,
   ) {
@@ -63,17 +64,17 @@ export class PostsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.postsService.findOne(+id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updatePostDto: UpdatePostDto) {
     return this.postsService.update(+id, updatePostDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.postsService.remove(+id);
   }
 }
