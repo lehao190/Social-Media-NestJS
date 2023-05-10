@@ -28,8 +28,7 @@
 
 ## Configs
 
-_ Create serviceAccountKey.json(Firebase admin credentials) file at project root folder
-_ Create .env file from .example.env
+_ Create serviceAccountKey.json(Firebase admin credentials) file at project root folder. Create .env file from .example.env
 
 ## Installation
 
