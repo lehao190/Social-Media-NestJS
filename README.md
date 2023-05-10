@@ -26,6 +26,11 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Configs
+
+_ Create serviceAccountKey.json(Firebase admin credentials) file at project root folder
+_ Create .env file from .example.env
+
 ## Installation
 
 ```bash
